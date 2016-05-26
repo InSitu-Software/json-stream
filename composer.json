@@ -1,15 +1,6 @@
 {
-    "name": "rayward/json-stream",
-    "description": "A PHP library for encoding and decoding JSON data using a stream.",
-    "authors": [
-        {
-            "name": "Ray Ward",
-            "email": "ray@rayward.com.au"
-        }
-    ],
-	"require": {
-		"php": ">=5.3.0"
-	},
+    	"name": "insitu-software/json-stream",
+    	"description": "forked from http://github.com/sergionalin/json-stream",
 	"autoload": {
 		"psr-0": {
 			"JsonStream": "src"
