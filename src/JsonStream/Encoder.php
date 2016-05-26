@@ -102,68 +102,30 @@ class Encoder
 			? $value->jsonSerialize()
 			: $value;
 
-		// null, bool and scalar values
 		if(is_null($value)) {
 			$this->_writer->write('null');
-			return;
 		}
-		elseif ($value === false) {
-			$this->_writer->write('false');
-			return;
+		elseif (is_bool($value)) {
+			$this->_writer->write($value ? 'true' : 'false');
 		}
-		elseif ($value === true) {
-			$this->_writer->write('true');
-			return;
+		elseif (is_int($value)) {
+			$this->_writer->write($value);
 		}
-		elseif (is_scalar($value)) {
-			$this->_encodeScalar($value);
-			return;
-		}
-
-		// array of values
-		if ($this->_isList($value)) {
-			$this->_encodeList($value);
-			return;
-		}
-		// objects and associative arrays
-		else {
-			$this->_encodeObject($value);
-			return;
-		}
-	}
-
-	/**
-	 * Encodes a scalar value.
-	 *
-	 * @param mixed $value
-	 */
-	private function _encodeScalar($value)
-	{
-		if (is_float($value)) {
-			// Always use "." for floats.
-			$encodedValue = floatval(str_replace(",", ".", strval($value)));
+		elseif (is_float($value)) {
+			$this->_writer->write( $this->_encodeFloat($value) );
 		}
 		elseif (is_string($value)) {
-			$encodedValue = $this->_encodeString($value);
+			$this->_writer->write( $this->_encodeString($value) );
 		}
-		else {
-			// otherwise this must be an int
-			$encodedValue = $value;
+		elseif ($this->_isList($value)) {
+			$this->_encodeList($value);
 		}
-
-		$this->_writer->write($encodedValue);
-	}
-
-	/**
-	 * Encodes a string.
-	 *
-	 * @param $string
-	 * @return string
-	 */
-	private function _encodeString($string)
-	{
-		static $jsonReplaces = array(array("\\", "/", "\n", "\t", "\r", "\b", "\f", '"', "\0"), array('\\\\', '\\/', '\\n', '\\t', '\\r', '\\b', '\\f', '\"', '\u0000'));
-		return '"' . str_replace($jsonReplaces[0], $jsonReplaces[1], $string) . '"';
+		elseif (is_object($value)) {
+			$this->_encodeObject($value);
+		}
+		elseif (is_resource($value)) {
+			// do nothing
+		}
 	}
 
 	/**
@@ -189,6 +151,28 @@ class Encoder
 		}
 
 		return true;
+	}
+
+	/**
+	 * Always use "." for floats.
+	 * @param  float $float
+	 * @return string
+	 */
+	private function _encodeFloat($float) {
+			//
+		return floatval(str_replace(",", ".", strval($float)));
+	}
+
+	/**
+	 * Encodes a string.
+	 *
+	 * @param $string
+	 * @return string
+	 */
+	private function _encodeString($string)
+	{
+		static $jsonReplaces = array(array("\\", "/", "\n", "\t", "\r", "\b", "\f", '"', "\0"), array('\\\\', '\\/', '\\n', '\\t', '\\r', '\\b', '\\f', '\"', '\u0000'));
+		return '"' . str_replace($jsonReplaces[0], $jsonReplaces[1], $string) . '"';
 	}
 
 	/**
