@@ -2,9 +2,33 @@
 
 namespace JsonStream;
 
+class Writer {
+
+	private $_stream;
+
+	public function __construct($stream) {
+		if (!is_resource($stream) || get_resource_type($stream) != 'stream') {
+			throw new \InvalidArgumentException("Resource is not a stream");
+		}
+
+		$this->_stream = $stream;
+	}
+
+	/**
+	 * Writes a value to the stream.
+	 *
+	 * @param string $value
+	 */
+	public function write($value)
+	{
+		fwrite($this->_stream, $value);
+	}
+}
+
 class Encoder
 {
-	private $_stream;
+
+	private $_writer;
 
 	/**
 	 * @param resource $stream A stream resource.
@@ -17,9 +41,7 @@ class Encoder
 			$stream = fopen('php://output', 'w');
 		}
 
-		if (!is_resource($stream) || get_resource_type($stream) != 'stream') {
-			throw new \InvalidArgumentException("Resource is not a stream");
-		}
+		$this->_writer = new Writer($stream);
 	}
 
 	/**
@@ -31,15 +53,15 @@ class Encoder
 	{
 		// null, bool and scalar values
 		if(is_null($value)) {
-			$this->_writeValue('null');
+			$this->_writer->write('null');
 			return;
 		}
 		elseif ($value === false) {
-			$this->_writeValue('false');
+			$this->_writer->write('false');
 			return;
 		}
 		elseif ($value === true) {
-			$this->_writeValue('true');
+			$this->_writer->write('true');
 			return;
 		}
 		elseif (is_scalar($value)) {
@@ -57,16 +79,6 @@ class Encoder
 			$this->_encodeObject($value);
 			return;
 		}
-	}
-
-	/**
-	 * Writes a value to the stream.
-	 *
-	 * @param string $value
-	 */
-	private function _writeValue($value)
-	{
-		fwrite($this->_stream, $value);
 	}
 
 	/**
@@ -88,7 +100,7 @@ class Encoder
 			$encodedValue = $value;
 		}
 
-		$this->_writeValue($encodedValue);
+		$this->_writer->write($encodedValue);
 	}
 
 	/**
@@ -135,20 +147,20 @@ class Encoder
 	 */
 	private function _encodeList($list)
 	{
-		$this->_writeValue('[');
+		$this->_writer->write('[');
 
 		$firstIteration = true;
 
 		foreach ($list as $x => $value) {
 			if (!$firstIteration) {
-				$this->_writeValue(',');
+				$this->_writer->write(',');
 			}
 			$firstIteration = false;
 
 			$this->encode($value);
 		}
 
-		$this->_writeValue(']');
+		$this->_writer->write(']');
 	}
 
 	/**
@@ -158,21 +170,21 @@ class Encoder
 	 */
 	private function _encodeObject($object)
 	{
-		$this->_writeValue('{');
+		$this->_writer->write('{');
 
 		$firstIteration = true;
 
 		foreach ($object as $key => $value) {
 			if (!$firstIteration) {
-				$this->_writeValue(',');
+				$this->_writer->write(',');
 			}
 			$firstIteration = false;
 
 			$this->_encodeScalar((string)$key);
-			$this->_writeValue(':');
+			$this->_writer->write(':');
 			$this->encode($value);
 		}
 
-		$this->_writeValue('}');
+		$this->_writer->write('}');
 	}
 }
