@@ -51,6 +51,11 @@ class Encoder
 	 */
 	public function encode($value)
 	{
+		// invoke preprocessing
+		$value = $value instanceof \JsonSerializable
+			? $value->jsonSerialize()
+			: $value;
+
 		// null, bool and scalar values
 		if(is_null($value)) {
 			$this->_writer->write('null');
