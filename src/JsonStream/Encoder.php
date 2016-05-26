@@ -112,7 +112,7 @@ class Encoder
 			$this->_writer->write($value);
 		}
 		elseif (is_float($value)) {
-			$this->_writer->write( $this->_encodeFloat($value) );
+			$this->_writer->write($value);
 		}
 		elseif (is_string($value)) {
 			$this->_writer->write( $this->_encodeString($value) );
@@ -151,16 +151,6 @@ class Encoder
 		}
 
 		return true;
-	}
-
-	/**
-	 * Always use "." for floats.
-	 * @param  float $float
-	 * @return string
-	 */
-	private function _encodeFloat($float) {
-			//
-		return floatval(str_replace(",", ".", strval($float)));
 	}
 
 	/**
