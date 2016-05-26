@@ -4,38 +4,38 @@ namespace JsonStream;
 
 class Writer {
 
-	private $_stream;
-
 	private $_buffer = "";
 	private $_buffer_entries = 0;
-	private $_buffer_size = 64;
+
+	private $_stream;
+	private $_stream_buffer_size;
 
 	/**
 	 * @param resource $stream A stream resource.
 	 * @param int buffer_size Number of buffered write queries before stream output
 	 * @throws \InvalidArgumentException If $stream is not a stream resource.
 	 */
-	public function __construct($stream, $buffer_size = null) {
+	public function __construct($stream = null, $stream_buffer_size = false) {
 
-		if (!is_resource($stream) || get_resource_type($stream) != 'stream') {
-			throw new \InvalidArgumentException("Resource is not a stream");
-		}
+		if (!is_null($stream)) {
 
-		$this->_stream = $stream;
+			if (!is_resource($stream) || get_resource_type($stream) != 'stream') {
+				throw new \InvalidArgumentException("Resource is not a stream");
+			}
+
+			$this->_stream = $stream;
 
 
-		if (!is_null($buffer_size)) {
+			if ($stream_buffer_size === false) {
 
-			if ($buffer_size === false) {
+				// disable stream buffer
+				$stream_buffer_size = 0;
 
-				$buffer_size = 0;
+			} else if (is_int($stream_buffer_size)) {
 
-			} else if (is_int($buffer_size)) {
-
-				$this->_buffer_size = $buffer_size;
+				$this->_stream_buffer_size = $stream_buffer_size;
 			}
 		}
-
 	}
 
 	/**
@@ -48,7 +48,7 @@ class Writer {
 		$this->_buffer .= $value;
 		$this->_buffer_entries++;
 
-		if ($this->_buffer_entries >= $this->_buffer_size) {
+		if ($this->_stream && $this->_buffer_entries >= $this->_stream_buffer_size) {
 
 			$this->flush();
 		}
@@ -56,13 +56,21 @@ class Writer {
 
 	/**
 	 * empties output buffer into stream
+	 * @return string flushed buffer
 	 */
 	public function flush() {
 
-		fwrite($this->_stream, $this->_buffer);
+		$buffer = $this->_buffer;
 
+		// reset buffer
 		$this->_buffer = "";
 		$this->_buffer_entries = 0;
+
+		// output buffered
+		if ($this->_stream) {
+			fwrite($this->_stream, $buffer);
+		}
+		return $buffer;
 	}
 }
 
@@ -76,11 +84,6 @@ class Encoder
 	 */
 	public function __construct($stream = null)
 	{
-		// default to output
-		if (is_null($stream)) {
-			$stream = fopen('php://output', 'w');
-		}
-
 		$this->_writer = new Writer($stream);
 	}
 
@@ -88,12 +91,13 @@ class Encoder
 	 * Encodes a value and writes it to the stream.
 	 *
 	 * @param mixed $value
+	 * @return last written buffer segment / encoded json in streamless mode
 	 */
 	public function encode($value) {
 
 		$this->_encode($value);
 
-		$this->_writer->flush();
+		return $this->_writer->flush();
 	}
 
 	private function _encode($value) {
@@ -205,7 +209,7 @@ class Encoder
 			}
 			$firstIteration = false;
 
-			$this->_encodeScalar((string)$key);
+			$this->_writer->write( $this->_encodeString((string)$key) );
 			$this->_writer->write(':');
 			$this->_encode($value);
 		}
