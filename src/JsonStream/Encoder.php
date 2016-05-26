@@ -6,12 +6,36 @@ class Writer {
 
 	private $_stream;
 
-	public function __construct($stream) {
+	private $_buffer = "";
+	private $_buffer_entries = 0;
+	private $_buffer_size = 64;
+
+	/**
+	 * @param resource $stream A stream resource.
+	 * @param int buffer_size Number of buffered write queries before stream output
+	 * @throws \InvalidArgumentException If $stream is not a stream resource.
+	 */
+	public function __construct($stream, $buffer_size = null) {
+
 		if (!is_resource($stream) || get_resource_type($stream) != 'stream') {
 			throw new \InvalidArgumentException("Resource is not a stream");
 		}
 
 		$this->_stream = $stream;
+
+
+		if (!is_null($buffer_size)) {
+
+			if ($buffer_size === false) {
+
+				$buffer_size = 0;
+
+			} else if (is_int($buffer_size)) {
+
+				$this->_buffer_size = $buffer_size;
+			}
+		}
+
 	}
 
 	/**
@@ -21,7 +45,24 @@ class Writer {
 	 */
 	public function write($value)
 	{
-		fwrite($this->_stream, $value);
+		$this->_buffer .= $value;
+		$this->_buffer_entries++;
+
+		if ($this->_buffer_entries >= $this->_buffer_size) {
+
+			$this->flush();
+		}
+	}
+
+	/**
+	 * empties output buffer into stream
+	 */
+	public function flush() {
+
+		fwrite($this->_stream, $this->_buffer);
+
+		$this->_buffer = "";
+		$this->_buffer_entries = 0;
 	}
 }
 
@@ -32,7 +73,6 @@ class Encoder
 
 	/**
 	 * @param resource $stream A stream resource.
-	 * @throws \InvalidArgumentException If $stream is not a stream resource.
 	 */
 	public function __construct($stream = null)
 	{
@@ -49,8 +89,14 @@ class Encoder
 	 *
 	 * @param mixed $value
 	 */
-	public function encode($value)
-	{
+	public function encode($value) {
+
+		$this->_encode($value);
+
+		$this->_writer->flush();
+	}
+
+	private function _encode($value) {
 		// invoke preprocessing
 		$value = $value instanceof \JsonSerializable
 			? $value->jsonSerialize()
@@ -162,7 +208,7 @@ class Encoder
 			}
 			$firstIteration = false;
 
-			$this->encode($value);
+			$this->_encode($value);
 		}
 
 		$this->_writer->write(']');
@@ -187,7 +233,7 @@ class Encoder
 
 			$this->_encodeScalar((string)$key);
 			$this->_writer->write(':');
-			$this->encode($value);
+			$this->_encode($value);
 		}
 
 		$this->_writer->write('}');
