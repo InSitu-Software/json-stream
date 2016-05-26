@@ -5,21 +5,21 @@ namespace JsonStream;
 class Encoder
 {
 	private $_stream;
-	private $_echo;
 
 	/**
 	 * @param resource $stream A stream resource.
 	 * @throws \InvalidArgumentException If $stream is not a stream resource.
 	 */
-	public function __construct($stream,$echo=false)
+	public function __construct($stream = null)
 	{
-		$this->_echo=$echo;
-		if (!$this->_echo && (!is_resource($stream) || get_resource_type($stream) != 'stream')) {
-			throw new \InvalidArgumentException("Resource is not a stream");
+		// default to output
+		if (is_null($stream)) {
+			$stream = fopen('php://output', 'w');
 		}
 
-		if(!$this->_echo)
-			$this->_stream = $stream;
+		if (!is_resource($stream) || get_resource_type($stream) != 'stream') {
+			throw new \InvalidArgumentException("Resource is not a stream");
+		}
 	}
 
 	/**
@@ -66,11 +66,7 @@ class Encoder
 	 */
 	private function _writeValue($value)
 	{
-		if(!$this->_echo){
-			fwrite($this->_stream, $value);
-		} else {
-			echo $value;
-		}
+		fwrite($this->_stream, $value);
 	}
 
 	/**
@@ -140,15 +136,15 @@ class Encoder
 	private function _encodeList($list)
 	{
 		$this->_writeValue('[');
-		
+
 		$firstIteration = true;
-		
+
 		foreach ($list as $x => $value) {
 			if (!$firstIteration) {
 				$this->_writeValue(',');
 			}
 			$firstIteration = false;
-			
+
 			$this->encode($value);
 		}
 
