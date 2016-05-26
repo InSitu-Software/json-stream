@@ -109,8 +109,11 @@ class Encoder
 		if(is_null($value)) {
 			$this->_writer->write('null');
 		}
-		elseif (is_bool($value)) {
-			$this->_writer->write($value ? 'true' : 'false');
+		elseif ($value === false) {
+			$this->_writer->write('false');
+		}
+		elseif ($value === true) {
+			$this->_writer->write('true');
 		}
 		elseif (is_int($value)) {
 			$this->_writer->write($value);
@@ -121,40 +124,24 @@ class Encoder
 		elseif (is_string($value)) {
 			$this->_writer->write( $this->_encodeString($value) );
 		}
-		elseif ($this->_isList($value)) {
-			$this->_encodeList($value);
-		}
-		elseif (is_object($value)) {
-			$this->_encodeObject($value);
-		}
 		elseif (is_resource($value)) {
 			// do nothing
+		} elseif ($this->_isNumericArray($value)) {
+			$this->_encodeList($value);
+		} else {
+			$this->_encodeObject($value);
 		}
 	}
 
 	/**
-	 * Checks if a value is a flat list of values (simple array) or a map (assoc. array or object).
+	 * Checks if a value is a sequential numeric array
 	 *
 	 * @param mixed $value
 	 * @return bool
 	 */
-	private function _isList($value)
+	private function _isNumericArray($value)
 	{
-		// objects that are not explicitly traversable could never have integer keys, therefore they are not a list
-		if (is_object($value) && !($value instanceof \Traversable)) {
-			return false;
-		}
-
-		// check if the array/object has only integer keys.
-		$i = 0;
-		foreach ($value as $key => $element) {
-			if ($key !== $i) {
-				return false;
-			}
-			$i++;
-		}
-
-		return true;
+		return is_array($value) && (array_values($value) === $value);
 	}
 
 	/**
